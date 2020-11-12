@@ -1,0 +1,131 @@
+#!/bin/bash
+
+USAGE="Usage: `basename $0` <connect> <Family> \n"
+
+# Test for the number of input arguments
+if [ $# -lt 2 ]
+then
+   echo $USAGE
+   exit 1
+fi
+
+CONNECT=$1
+
+Family=$2
+
+export LogFile="${LOGDIR}/`date '+%h_%d'`.log"
+export ErrFile="${ERROR}/err.in_unix_`date '+%G%m%d%H%M%S'`"
+#providing permission:
+if [ ! -f "$LogFile" ]
+  then
+    touch ${LogFile}
+    chmod 666 ${LogFile}
+fi #! -f "$LogFile"
+
+
+msg()
+{
+   echo  "`date +'%a %b %d %T'` ${Family} Object: int_execute_sql_gen.ksh : $1 "  | tee -a ${LogFile}
+} # msg()
+
+
+Execute_SQL()
+{
+  Execute_Qry="${1}"
+  ON_OFF_SQL_Res="${2}"
+sqlplus -s ${CONNECT} <<EOF
+set pages 0 lines 120 trimout on trimspool on tab off echo off verify off feed on serverout on
+spool ${ON_OFF_SQL_Res}
+whenever sqlerror exit SQL.SQLCODE
+${Execute_Qry};
+spool off
+EXIT
+EOF
+
+Exec_Chk=`grep '1 row selected' ${ON_OFF_SQL_Res} | wc -l | bc`
+if [ ${Exec_Chk} -eq 1 ]
+   then
+   return 0
+fi
+
+return 1
+} #Execute_SQL()
+
+Update_SQL()
+{
+  Execute_Qry="${1}"
+  ON_OFF_SQL_Res="${2}"
+sqlplus -s ${CONNECT} <<EOF
+set pages 0 lines 120 trimout on trimspool on tab off echo off verify off feed on serverout on
+spool ${ON_OFF_SQL_Res}
+whenever sqlerror exit SQL.SQLCODE
+${Execute_Qry};
+COMMIT;
+spool off
+EXIT
+EOF
+
+Exec_Chk=`grep '1 row updated' ${ON_OFF_SQL_Res} | wc -l | bc`
+if [ ${Exec_Chk} -eq 1 ]
+   then
+   return 0
+fi
+
+return 1
+} #Update_SQL()
+
+if [ ! -f "$LogFile" ]
+ then
+   touch ${LogFile}
+   chmod 666 ${LogFile}
+fi # ! -f "$LogFile"
+
+Extract_Qry="     SELECT GEN_F.VALUE || '|' || INT_F.VALUE || '|' || FAM.EXECUTION_IND
+                    FROM INT_CONFIGURATION INT_F
+              INNER JOIN INT_CONFIGURATION GEN_F
+                      ON INT_F.KEY=GEN_F.KEY AND GEN_F.KEY='INTERFACE_RUN_IND'
+                     AND GEN_F.KEY_DETAIL='GENERAL'
+                     AND INT_F.KEY_DETAIL='`echo ${Family}`'
+              INNER JOIN INT_INTERFACE_STATUS FAM
+                      ON FAM.FAMILY_NAME = INT_F.KEY_DETAIL "
+SQL_Res="/retail/psmbatch/tmp/int_${Family}_OnOff_ind.tmp"
+Execute_SQL "${Extract_Qry}" "${SQL_Res}"
+
+if [ $? -eq 1 ]
+   then
+   exit 1
+else
+   
+   Upd_F=0
+   rec=`sed '/^$/d' ${ON_OFF_SQL_Res}  | head -1`
+   gen_f=`echo $rec | cut -d'|' -f1`
+   int_f=`echo $rec | cut -d'|' -f2`
+   ctrl_f=`echo $rec | cut -d'|' -f3`
+   if [[ ${gen_f} = "OFF" ]] && [[ ${gen_f} != ${ctrl_f} ]]
+      then
+      Update_Qry=" UPDATE INT_INTERFACE_STATUS SET EXECUTION_IND='OFF' , LAST_UPDATE_DATE = SYSDATE WHERE FAMILY_NAME='`echo ${Family}`'"
+          Upd_F=1;
+   elif [[ ${int_f} != ${ctrl_f} ]]
+      then
+      Update_Qry=" UPDATE INT_INTERFACE_STATUS SET EXECUTION_IND='`echo ${int_f}`' , LAST_UPDATE_DATE = SYSDATE WHERE FAMILY_NAME='`echo ${Family}`'"
+      Upd_F=1;
+   fi
+   if [ ${Upd_F} -eq 1 ]
+      then
+      SQL_Res="/retail/psmbatch/tmp/int_${Family}_OnOff_upd_ind.tmp"
+      Update_SQL "${Update_Qry}" "${SQL_Res}"
+	  if [ $? -eq 0 ]
+	     then
+         msg " EXECUTION_IND changed. Qry: `echo ${Update_Qry}`"
+	  fi 	 
+   fi
+
+   if [[ ${gen_f} = "ON" ]]  && [[ ${int_f} = "ON" ]]
+      then
+      exit 0
+   else
+      exit 1
+   fi
+
+fi
+exit 1
