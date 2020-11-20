@@ -1,8 +1,8 @@
 #! /bin/ksh
 #----------------------------------------------------------------------------------
-#  File:  nb_purge_psm_data.ksh
+#  File:  int_purge_psm_intg.ksh
 #
-#  Desc:  UNIX shell script to Call respective Fuctions of  Package nb_purge_psm_data  
+#  Desc:  UNIX shell script to Call respective Functions of  Package INTG_PURGE_DATA_RET  
 #-------------------------------------------------------------------------------------
 pgmName=`basename $0`
 pgmName=${pgmName##*/}    # remove the path
@@ -10,7 +10,7 @@ pgmExt=${pgmName##*.}     # get the extension
 pgmName=${pgmName%.*}     # get the program name
 pgmPID=$$                 # get the process ID
 exeDate=`date +"%h_%d"`   # get the execution date
-LOGFILE="${LOGDIR}/$exeDate.log"
+LOGFILE="${LOGDIR}/$exeDate"_ctrl".log"
 ERRORFILE="${ERROR}/err.$pgmName."$exeDate
 ERRINDFILE=err.ind
 
@@ -54,11 +54,11 @@ function LOG_MESSAGE
 }
 
 #-------------------------------------------------------------------------
-# Function Name: EXEC_SQL
+# Function Name: EXEC_SQL_CTRL
 # Purpose      : Used for executing the sql statements.
 #-------------------------------------------------------------------------
 
-function EXEC_SQL
+function EXEC_SQL_CTRL
 {
    sqlTxt=$*
 
@@ -83,7 +83,7 @@ function EXEC_SQL
       " | sqlplus -s ${CONNECT}`
     
    if [[ $? -ne ${OK} ]]; then
-      LOG_ERROR "${sqlReturn}" "EXEC_SQL" ${FATAL} ${ERRORFILE} ${LOGFILE} ${pgmName}
+      LOG_ERROR "${sqlReturn}" "EXEC_SQL_CTRL" ${FATAL} ${ERRORFILE} ${LOGFILE} ${pgmName}
       return ${FATAL}
    fi
 
@@ -92,11 +92,11 @@ function EXEC_SQL
 
 
 #-------------------------------------------------------------------------
-# Function Name: DEL_TRANSFERS
-# Purpose      : calls the package NB_PSM_PURGE_DATA_SQL.DEL_TRANSFERS.
+# Function Name: DEL_INT_RETICKET_CTRL_AUDIT --1
+# Purpose      : calls the package INTG_PURGE_DATA_RET.DEL_INT_RETICKET_CTRL_AUDIT
 #-------------------------------------------------------------------------
 
-function DEL_TRANSFERS
+function DEL_INT_RETICKET_CTRL_AUDIT
 {
    threadVal=1
    sqlTxt="
@@ -106,7 +106,7 @@ function DEL_TRANSFERS
          FUNCTION_ERROR    EXCEPTION;
       BEGIN
 
-         if NOT NB_PSM_PURGE_DATA_SQL.DEL_TRANSFERS(:GV_script_error) then
+         if NOT INTG_PURGE_DATA_RET.DEL_INT_RETICKET_CTRL_AUDIT(:GV_script_error) then
             raise FUNCTION_ERROR;
          end if;
 
@@ -121,10 +121,10 @@ function DEL_TRANSFERS
             :GV_script_error := SQLERRM;
             :GV_return_code := ${FATAL};
       END;"	  
-   EXEC_SQL ${sqlTxt}
+   EXEC_SQL_CTRL ${sqlTxt}
 
    if [[ $? -ne ${OK} ]]; then
-      echo "DEL_TRANSFERS Thread: $threadVal Failed" >>${ERRORFILE}
+      echo "DEL_INT_RETICKET_CTRL_AUDIT Thread: $threadVal Failed" >>${ERRORFILE}
       return ${FATAL}
    else
       LOG_MESSAGE "Thread ${threadVal} - Successfully Completed"
@@ -133,11 +133,11 @@ function DEL_TRANSFERS
 }
 
 #-------------------------------------------------------------------------
-# Function Name: DEL_DSDS
-# Purpose      : calls the package NB_PSM_PURGE_DATA_SQL.DEL_DSDS.
+# Function Name: DEL_INT_STAGED_MESSAGE_AUDIT --2
+# Purpose      : calls the package INTG_PURGE_DATA_RET.DEL_INT_STAGED_MESSAGE_AUDIT
 #-------------------------------------------------------------------------
 
-function DEL_DSDS
+function DEL_INT_STAGED_MESSAGE_AUDIT
 {
    threadVal=1
    sqlTxt="
@@ -147,7 +147,7 @@ function DEL_DSDS
          FUNCTION_ERROR    EXCEPTION;
       BEGIN
 
-         if NOT NB_PSM_PURGE_DATA_SQL.DEL_DSDS(:GV_script_error) then
+         if NOT INTG_PURGE_DATA_RET.DEL_INT_STAGED_MESSAGE_AUDIT(:GV_script_error) then
             raise FUNCTION_ERROR;
          end if;
 
@@ -162,10 +162,10 @@ function DEL_DSDS
             :GV_script_error := SQLERRM;
             :GV_return_code := ${FATAL};
       END;"	  
-   EXEC_SQL ${sqlTxt}
+   EXEC_SQL_CTRL ${sqlTxt}
 
    if [[ $? -ne ${OK} ]]; then
-      echo "DEL_DSDS Thread: $threadVal Failed" >>${ERRORFILE}
+      echo "DEL_INT_STAGED_MESSAGE_AUDIT Thread: $threadVal Failed" >>${ERRORFILE}
       return ${FATAL}
    else
       LOG_MESSAGE "Thread ${threadVal} - Successfully Completed"
@@ -174,11 +174,11 @@ function DEL_DSDS
 }
 
 #-------------------------------------------------------------------------
-# Function Name: DEL_RTVS
-# Purpose      : calls the package NB_PSM_PURGE_DATA_SQL.DEL_RTVS.
+# Function Name: DEL_INT_STKADJ_CTRL_AUDIT --3
+# Purpose      : calls the package INTG_PURGE_DATA_RET.DEL_INT_STKADJ_CTRL_AUDIT
 #-------------------------------------------------------------------------
 
-function DEL_RTVS
+function DEL_INT_STKADJ_CTRL_AUDIT
 {
    threadVal=1
    sqlTxt="
@@ -188,7 +188,7 @@ function DEL_RTVS
          FUNCTION_ERROR    EXCEPTION;
       BEGIN
 
-         if NOT NB_PSM_PURGE_DATA_SQL.DEL_RTVS(:GV_script_error) then
+         if NOT INTG_PURGE_DATA_RET.DEL_INT_STKADJ_CTRL_AUDIT(:GV_script_error) then
             raise FUNCTION_ERROR;
          end if;
 
@@ -203,10 +203,10 @@ function DEL_RTVS
             :GV_script_error := SQLERRM;
             :GV_return_code := ${FATAL};
       END;"	  
-   EXEC_SQL ${sqlTxt}
+   EXEC_SQL_CTRL ${sqlTxt}
 
    if [[ $? -ne ${OK} ]]; then
-      echo "DEL_RTVS Thread: $threadVal Failed" >>${ERRORFILE}
+      echo "DEL_INT_STKADJ_CTRL_AUDIT Thread: $threadVal Failed" >>${ERRORFILE}
       return ${FATAL}
    else
       LOG_MESSAGE "Thread ${threadVal} - Successfully Completed"
@@ -215,11 +215,11 @@ function DEL_RTVS
 }
 
 #-------------------------------------------------------------------------
-# Function Name: DEL_INV_ADJUSTS
-# Purpose      : calls the package NB_PSM_PURGE_DATA_SQL.DEL_INV_ADJUSTS.
+# Function Name: DEL_INT_STKCNT_CTRL_AUDIT --4
+# Purpose      : calls the package INTG_PURGE_DATA_RET.DEL_INT_STKCNT_CTRL_AUDIT
 #-------------------------------------------------------------------------
 
-function DEL_INV_ADJUSTS
+function DEL_INT_STKCNT_CTRL_AUDIT
 {
    threadVal=1
    sqlTxt="
@@ -229,7 +229,7 @@ function DEL_INV_ADJUSTS
          FUNCTION_ERROR    EXCEPTION;
       BEGIN
 
-         if NOT NB_PSM_PURGE_DATA_SQL.DEL_INV_ADJUSTS(:GV_script_error) then
+         if NOT INTG_PURGE_DATA_RET.DEL_INT_STKCNT_CTRL_AUDIT(:GV_script_error) then
             raise FUNCTION_ERROR;
          end if;
 
@@ -244,10 +244,10 @@ function DEL_INV_ADJUSTS
             :GV_script_error := SQLERRM;
             :GV_return_code := ${FATAL};
       END;"	  
-   EXEC_SQL ${sqlTxt}
+   EXEC_SQL_CTRL ${sqlTxt}
 
    if [[ $? -ne ${OK} ]]; then
-      echo "DEL_INV_ADJUSTS Thread: $threadVal Failed" >>${ERRORFILE}
+      echo "DEL_INT_STKCNT_CTRL_AUDIT Thread: $threadVal Failed" >>${ERRORFILE}
       return ${FATAL}
    else
       LOG_MESSAGE "Thread ${threadVal} - Successfully Completed"
@@ -256,11 +256,11 @@ function DEL_INV_ADJUSTS
 }
 
 #-------------------------------------------------------------------------
-# Function Name: DEL_STOCK_COUNTS
-# Purpose      : calls the package NB_PSM_PURGE_DATA_SQL.DEL_STOCK_COUNTS.
+# Function Name: DEL_INT_TSFIN_AUDIT --5
+# Purpose      : calls the package INTG_PURGE_DATA_RET.DEL_INT_TSFIN_AUDIT
 #-------------------------------------------------------------------------
 
-function DEL_STOCK_COUNTS
+function DEL_INT_TSFIN_AUDIT
 {
    threadVal=1
    sqlTxt="
@@ -270,7 +270,7 @@ function DEL_STOCK_COUNTS
          FUNCTION_ERROR    EXCEPTION;
       BEGIN
 
-         if NOT NB_PSM_PURGE_DATA_SQL.DEL_STOCK_COUNTS(:GV_script_error) then
+         if NOT INTG_PURGE_DATA_RET.DEL_INT_TSFIN_AUDIT(:GV_script_error) then
             raise FUNCTION_ERROR;
          end if;
 
@@ -285,10 +285,10 @@ function DEL_STOCK_COUNTS
             :GV_script_error := SQLERRM;
             :GV_return_code := ${FATAL};
       END;"	  
-   EXEC_SQL ${sqlTxt}
+   EXEC_SQL_CTRL ${sqlTxt}
 
    if [[ $? -ne ${OK} ]]; then
-      echo "DEL_STOCK_COUNTS Thread: $threadVal Failed" >>${ERRORFILE}
+      echo "DEL_INT_TSFIN_AUDIT Thread: $threadVal Failed" >>${ERRORFILE}
       return ${FATAL}
    else
       LOG_MESSAGE "Thread ${threadVal} - Successfully Completed"
@@ -297,11 +297,11 @@ function DEL_STOCK_COUNTS
 }
 
 #-------------------------------------------------------------------------
-# Function Name: DEL_ITEMS
-# Purpose      : calls the package NB_PSM_PURGE_DATA_SQL.DEL_ITEMS.
+# Function Name: DEL_INT_TSFIN_CTRL_AUDIT --6
+# Purpose      : calls the package INTG_PURGE_DATA_RET.DEL_INT_TSFIN_CTRL_AUDIT
 #-------------------------------------------------------------------------
 
-function DEL_ITEMS
+function DEL_INT_TSFIN_CTRL_AUDIT
 {
    threadVal=1
    sqlTxt="
@@ -311,7 +311,7 @@ function DEL_ITEMS
          FUNCTION_ERROR    EXCEPTION;
       BEGIN
 
-         if NOT NB_PSM_PURGE_DATA_SQL.DEL_ITEMS(:GV_script_error) then
+         if NOT INTG_PURGE_DATA_RET.DEL_INT_TSFIN_CTRL_AUDIT(:GV_script_error) then
             raise FUNCTION_ERROR;
          end if;
 
@@ -326,10 +326,10 @@ function DEL_ITEMS
             :GV_script_error := SQLERRM;
             :GV_return_code := ${FATAL};
       END;"	  
-   EXEC_SQL ${sqlTxt}
+   EXEC_SQL_CTRL ${sqlTxt}
 
    if [[ $? -ne ${OK} ]]; then
-      echo "DEL_ITEMS Thread: $threadVal Failed" >>${ERRORFILE}
+      echo "DEL_INT_TSFIN_CTRL_AUDIT Thread: $threadVal Failed" >>${ERRORFILE}
       return ${FATAL}
    else
       LOG_MESSAGE "Thread ${threadVal} - Successfully Completed"
@@ -338,11 +338,11 @@ function DEL_ITEMS
 }
 
 #-------------------------------------------------------------------------
-# Function Name: DEL_SALES
-# Purpose      : calls the package NB_PSM_PURGE_DATA_SQL.DEL_SALES.
+# Function Name: DEL_INT_SALES_WEEK_SUM --7
+# Purpose      : calls the package INTG_PURGE_DATA_RET.DEL_INT_SALES_WEEK_SUM
 #-------------------------------------------------------------------------
 
-function DEL_SALES
+function DEL_INT_SALES_WEEK_SUM
 {
    threadVal=1
    sqlTxt="
@@ -352,7 +352,7 @@ function DEL_SALES
          FUNCTION_ERROR    EXCEPTION;
       BEGIN
 
-         if NOT NB_PSM_PURGE_DATA_SQL.DEL_SALES(:GV_script_error) then
+         if NOT INTG_PURGE_DATA_RET.DEL_INT_SALES_WEEK_SUM(:GV_script_error) then
             raise FUNCTION_ERROR;
          end if;
 
@@ -367,22 +367,23 @@ function DEL_SALES
             :GV_script_error := SQLERRM;
             :GV_return_code := ${FATAL};
       END;"	  
-   EXEC_SQL ${sqlTxt}
+   EXEC_SQL_CTRL ${sqlTxt}
 
    if [[ $? -ne ${OK} ]]; then
-      echo "DEL_SALES Thread: $threadVal Failed" >>${ERRORFILE}
+      echo "DEL_INT_SALES_WEEK_SUM Thread: $threadVal Failed" >>${ERRORFILE}
       return ${FATAL}
    else
       LOG_MESSAGE "Thread ${threadVal} - Successfully Completed"
       return ${OK}
    fi
 }
+
 #-------------------------------------------------------------------------
-# Function Name: DEL_ERROR_LOG
-# Purpose      : calls the package NB_PSM_PURGE_DATA_SQL.DEL_ERROR_LOG.
+# Function Name: DEL_INT_STORE_BATCH_CTRL --8
+# Purpose      : calls the package INTG_PURGE_DATA_RET.DEL_INT_STORE_BATCH_CTRL
 #-------------------------------------------------------------------------
 
-function DEL_ERROR_LOG
+function DEL_INT_STORE_BATCH_CTRL
 {
    threadVal=1
    sqlTxt="
@@ -392,7 +393,7 @@ function DEL_ERROR_LOG
          FUNCTION_ERROR    EXCEPTION;
       BEGIN
 
-         if NOT NB_PSM_PURGE_DATA_SQL.DEL_ERROR_LOG(:GV_script_error) then
+         if NOT INTG_PURGE_DATA_RET.DEL_INT_STORE_BATCH_CTRL(:GV_script_error) then
             raise FUNCTION_ERROR;
          end if;
 
@@ -407,16 +408,100 @@ function DEL_ERROR_LOG
             :GV_script_error := SQLERRM;
             :GV_return_code := ${FATAL};
       END;"	  
-   EXEC_SQL ${sqlTxt}
+   EXEC_SQL_CTRL ${sqlTxt}
 
    if [[ $? -ne ${OK} ]]; then
-      echo "DEL_ERROR_LOG Thread: $threadVal Failed" >>${ERRORFILE}
+      echo "DEL_INT_STORE_BATCH_CTRL Thread: $threadVal Failed" >>${ERRORFILE}
       return ${FATAL}
    else
       LOG_MESSAGE "Thread ${threadVal} - Successfully Completed"
       return ${OK}
    fi
 }
+
+#-------------------------------------------------------------------------
+# Function Name: DEL_INTG_DSD_UPLOAD_CTRL --9
+# Purpose      : calls the package INTG_PURGE_DATA_RET.DEL_INTG_DSD_UPLOAD_CTRL
+#-------------------------------------------------------------------------
+
+function DEL_INTG_DSD_UPLOAD_CTRL
+{
+   threadVal=1
+   sqlTxt="
+      DECLARE
+         L_str_error_tst   VARCHAR2(1) := NULL;
+
+         FUNCTION_ERROR    EXCEPTION;
+      BEGIN
+
+         if NOT INTG_PURGE_DATA_RET.DEL_INTG_DSD_UPLOAD_CTRL(:GV_script_error) then
+            raise FUNCTION_ERROR;
+         end if;
+
+         COMMIT;
+
+      EXCEPTION
+         when FUNCTION_ERROR then
+            ROLLBACK;
+            :GV_return_code := ${FATAL};
+         when OTHERS then
+            ROLLBACK;
+            :GV_script_error := SQLERRM;
+            :GV_return_code := ${FATAL};
+      END;"	  
+   EXEC_SQL_CTRL ${sqlTxt}
+
+   if [[ $? -ne ${OK} ]]; then
+      echo "DEL_INTG_DSD_UPLOAD_CTRL Thread: $threadVal Failed" >>${ERRORFILE}
+      return ${FATAL}
+   else
+      LOG_MESSAGE "Thread ${threadVal} - Successfully Completed"
+      return ${OK}
+   fi
+}
+
+#-------------------------------------------------------------------------
+# Function Name: DEL_INTG_PRICE_EVENT_CTRL --10
+# Purpose      : calls the package INTG_PURGE_DATA_RET.DEL_INTG_PRICE_EVENT_CTRL
+#-------------------------------------------------------------------------
+
+function DEL_INTG_PRICE_EVENT_CTRL
+{
+   threadVal=1
+   sqlTxt="
+      DECLARE
+         L_str_error_tst   VARCHAR2(1) := NULL;
+
+         FUNCTION_ERROR    EXCEPTION;
+      BEGIN
+
+         if NOT INTG_PURGE_DATA_RET.DEL_INTG_PRICE_EVENT_CTRL(:GV_script_error) then
+            raise FUNCTION_ERROR;
+         end if;
+
+         COMMIT;
+
+      EXCEPTION
+         when FUNCTION_ERROR then
+            ROLLBACK;
+            :GV_return_code := ${FATAL};
+         when OTHERS then
+            ROLLBACK;
+            :GV_script_error := SQLERRM;
+            :GV_return_code := ${FATAL};
+      END;"	  
+   EXEC_SQL_CTRL ${sqlTxt}
+
+   if [[ $? -ne ${OK} ]]; then
+      echo "DEL_INTG_PRICE_EVENT_CTRL Thread: $threadVal Failed" >>${ERRORFILE}
+      return ${FATAL}
+   else
+      LOG_MESSAGE "Thread ${threadVal} - Successfully Completed"
+      return ${OK}
+   fi
+}
+
+
 #-----------------------------------------------
 # Main program starts 
 # Parse the command line
@@ -449,61 +534,73 @@ fi
 LOG_MESSAGE "Started by ${USER}"
 #Calls to the fucntion based on the thread count
 
-if [ $JOBNAME = "tsfs" -o $JOBNAME = "all" ]
+if [ $JOBNAME = "reticket" -o $JOBNAME = "all" -o $JOBNAME = "ALL" ]
 then
-	DEL_TRANSFERS
-	echo "Del_Transfers OK"  >> $LOGFILE
+	DEL_INT_RETICKET_CTRL_AUDIT
+	echo "DEL_INT_RETICKET_CTRL_AUDIT OK"  >> $LOGFILE
 fi
 
-if [ $JOBNAME = "dsds" -o $JOBNAME = "all" ]
-   then
-	DEL_DSDS
-    echo "Del_Dsds OK"  >> $LOGFILE
+if [ $JOBNAME = "staged" -o $JOBNAME = "all" -o $JOBNAME = "ALL" ]
+then
+	DEL_INT_STAGED_MESSAGE_AUDIT
+	echo "DEL_INT_STAGED_MESSAGE_AUDIT OK"  >> $LOGFILE
 fi
 
-if [ $JOBNAME = "rtvs" -o $JOBNAME = "all" ]
-   then
-	DEL_RTVS
-    echo "Del_Rtvs OK"  >> $LOGFILE
+if [ $JOBNAME = "stkadj" -o $JOBNAME = "all" -o $JOBNAME = "ALL" ]
+then
+	DEL_INT_STKADJ_CTRL_AUDIT
+	echo "DEL_INT_STKADJ_CTRL_AUDIT OK"  >> $LOGFILE
 fi
 
-if [ $JOBNAME = "inv_adj" -o $JOBNAME = "all" ]
-   then
-	DEL_INV_ADJUSTS
-    echo "Del_inv_adjusts OK"  >> $LOGFILE
+if [ $JOBNAME = "stkcnt" -o $JOBNAME = "all" -o $JOBNAME = "ALL" ]
+then
+	DEL_INT_STKCNT_CTRL_AUDIT
+	echo "DEL_INT_STKCNT_CTRL_AUDIT OK"  >> $LOGFILE
 fi
 
-if [ $JOBNAME = "stock_count" -o $JOBNAME = "all" ]
-   then
-	DEL_STOCK_COUNTS
-    echo "Del_Stock_counts OK"  >> $LOGFILE
+if [ $JOBNAME = "tsfin" -o $JOBNAME = "all" -o $JOBNAME = "ALL" ]
+then
+	DEL_INT_TSFIN_AUDIT
+	echo "DEL_INT_TSFIN_AUDIT OK"  >> $LOGFILE
 fi
 
-if [ $JOBNAME = "items" -o $JOBNAME = "all" ]
-   then
-	DEL_ITEMS
-    echo "Del_Items OK"  >> $LOGFILE
+if [ $JOBNAME = "tsfin_ctrl" -o $JOBNAME = "all" -o $JOBNAME = "ALL" ]
+then
+	DEL_INT_TSFIN_CTRL_AUDIT
+	echo "DEL_INT_TSFIN_CTRL_AUDIT OK"  >> $LOGFILE
 fi
 
-if [ $JOBNAME = "sales" -o $JOBNAME = "all" ]
-   then
-	DEL_SALES
-    echo "Del_Sales OK"  >> $LOGFILE
+if [ $JOBNAME = "sales" -o $JOBNAME = "all" -o $JOBNAME = "ALL" ]
+then
+	DEL_INT_SALES_WEEK_SUM
+	echo "DEL_INT_SALES_WEEK_SUM OK"  >> $LOGFILE
 fi
 
-if [ $JOBNAME = "sales" -o $JOBNAME = "all" ]
-   then
-	DEL_ERROR_LOG
-    echo "Del_error_LOG OK"  >> $LOGFILE
+if [ $JOBNAME = "store" -o $JOBNAME = "all" -o $JOBNAME = "ALL" ]
+then
+	DEL_INT_STORE_BATCH_CTRL
+	echo "DEL_INT_STORE_BATCH_CTRL OK"  >> $LOGFILE
 fi
-	
+
+if [ $JOBNAME = "dsd_upload" -o $JOBNAME = "all" -o $JOBNAME = "ALL" ]
+then
+	DEL_INTG_DSD_UPLOAD_CTRL
+	echo "DEL_INTG_DSD_UPLOAD_CTRL OK"  >> $LOGFILE
+fi
+
+if [ $JOBNAME = "price_event" -o $JOBNAME = "all" -o $JOBNAME = "ALL" ]
+then
+	DEL_INTG_PRICE_EVENT_CTRL
+	echo "DEL_INTG_PRICE_EVENT_CTRL OK"  >> $LOGFILE
+fi
+
 # Check for any Oracle errors from the SQLPLUS process
 if [ `grep "ORA-" $ERRORFILE | wc -l` -gt 0 ]
 then
    echo "Exiting due to ORA Error. Check error file"  >> $LOGFILE
    exit 1
 else
-   rm -f $ERRORFILE
+  rm -f $ERRORFILE
 fi
 
 exit 0
