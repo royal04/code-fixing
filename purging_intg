@@ -1,0 +1,190 @@
+#!/bin/bash
+
+rt LogFile="${LOGDIR}/`date '+%h_%d'`.log"
+export ErrFile="${ERROR}/err.intg_purge_in_unix_`date '+%G%m%d%H%M%S'`"
+export File_Purge_SQL_Res="/retail/psmbatch/tmp/intg_file_purge.tmp"
+export Table_Purge_SQL_Res="/retail/psmbatch/tmp/intg_table_purge.tmp"
+export Ctrl_Table_Purge_SQL_Res="/retail/psmbatch/tmp/intg_ctrl_table_purge.tmp"
+
+USAGE="Usage: `basename $0` <connect> \n"
+
+#-------------------------------------------------------------------------
+# Function Name: log_msg
+# Purpose      : Log the  messages to the log file.
+#-------------------------------------------------------------------------
+
+log_msg()
+{
+   echo  "`date +'%a %b %d %T'` INTG_PURGE Object: int_purge.ksh : $1 "  | tee -a ${LogFile}
+} # log_msg()
+
+#-------------------------------------------------------------------------
+# Function Name: err_msg
+# Purpose      : Log the error messages to the error file.
+#-------------------------------------------------------------------------
+
+err_msg()
+{
+   echo  "`date +'%a %b %d %T'` INTG_PURGE Object: int_purge.ksh : $1 "  | tee -a ${ErrFile}
+} # err_msg()
+
+#-------------------------------------------------------------------------
+# Function Name: Execute_SQL_Res
+# Purpose      : Call package to purge data
+#-------------------------------------------------------------------------
+
+Execute_SQL_Res()
+{
+
+  Execute_Qry="${1}"
+  SQL_Res="${2}"
+  log_msg "Executing Sql: `echo ${Execute_Qry}` and Result file `echo ${SQL_Res}`"
+
+sqlplus -s ${CONNECT} <<EOF
+set pages 0 lines 120 trimout on trimspool on tab off echo off verify off feed off serverout on
+spool ${SQL_Res}
+whenever sqlerror exit 9
+${Execute_Qry};
+COMMIT;
+spool off
+EXIT
+EOF
+
+if [ $? -eq 9 ]
+  then
+   return 9;
+else
+   return 0;
+fi
+} #Execute_SQL_Res()
+
+#providing permission:
+if [ ! -f "$LOGFILE" ]
+  then
+    touch ${LOGFILE}
+    chmod 666 ${LOGFILE}
+fi #! -f "$LOGFILE"
+#-----------------------------------------------
+# Main program starts 
+# Parse the command line
+#-----------------------------------------------
+
+# Test for the number of input arguments
+if [ $# -lt 1 ]
+then
+   echo $USAGE
+   exit 1
+fi
+
+CONNECT=$1
+
+log_msg "=================== Purge process is started ================="
+log_msg "========= Purge process is started for files ================="
+File_PURGE_QRY="SELECT PURGE_IND.KEY_DETAIL ||'|'|| RET.VALUE ||'|'|| FLE.VALUE AS TBL_DATA
+                      FROM INT_CONFIGURATION PURGE_IND
+                INNER JOIN INT_CONFIGURATION ON_OFF
+                        ON ON_OFF.KEY = PURGE_IND.KEY
+                       AND ON_OFF.VALUE = 'ON'
+                       AND ON_OFF.KEY_DETAIL   = 'GENERAL'
+                       AND ON_OFF.KEY   = 'PURGE_FILE_IND'
+                       AND PURGE_IND.KEY_DETAIL != 'GENERAL'
+                       AND PURGE_IND.VALUE = 'ON'
+                INNER JOIN INT_CONFIGURATION RET
+                        ON PURGE_IND.KEY_DETAIL = RET.KEY_DETAIL
+                       AND RET.KEY='PURGE_FILE_RET'
+                INNER JOIN INT_CONFIGURATION FLE
+                        ON PURGE_IND.KEY_DETAIL = FLE.KEY_DETAIL
+                       AND (FLE.KEY='PURGE_FILE'
+                       OR FLE.KEY='PURGE_FILE_ARC'
+                       OR FLE.KEY='PURGE_FILE_REJ')"
+
+
+rm -f ${File_Purge_SQL_Res}
+
+log_msg "Extaction SQL: `echo ${File_PURGE_QRY} `"
+
+Execute_SQL_Res "${File_PURGE_QRY}" ${File_Purge_SQL_Res}
+
+if [ $? -eq 9 ]
+   then
+   log_msg "Error in Run the file purge config query"
+   err_msg "Error in Run the file purge config query"
+else
+
+   while read line
+   do
+      l_key_detail=`echo ${line} | cut -d'|' -f1`
+      l_ret_day=`echo ${line} | cut -d'|' -f2`
+      l_file_path=`echo ${line} | cut -d'|' -f3`
+
+      log_msg "File Purge is started for ${l_key_detail} ${l_file_path} ${l_ret_day}"
+
+      find ${l_file_path} -type f -mtime +${l_ret_day} -exec rm -f {} \;
+          if [ $? -ne 0 ]
+             then
+                log_msg "Error in delete the file  ${l_key_detail} ${l_file_path} ${l_ret_day}"
+                err_msg "Error in delete the file  ${l_key_detail} ${l_file_path} ${l_ret_day}"
+          fi
+     log_msg "File Purge is Ended for ${l_key_detail} ${l_file_path} ${l_ret_day}"
+   done < ${File_Purge_SQL_Res}
+
+fi
+
+log_msg "========= Purge process is ended for files ================="
+
+log_msg "========= Purge process is started for Tables ================="
+TABLE_PURGE_QRY="SELECT TAB.VALUE ||'|'|| TAB.VALUE2 ||'|'|| RET.VALUE AS PURGE_DATA
+                   FROM INT_CONFIGURATION ON_OFF_GENERIC
+                      , INT_CONFIGURATION TAB
+                      , INT_CONFIGURATION RET
+                      ,   INT_CONFIGURATION ON_OFF
+                  WHERE ON_OFF_GENERIC.KEY        = 'PURGE'
+                    AND ON_OFF_GENERIC.KEY_DETAIL = 'GENERAL'
+                    AND ON_OFF_GENERIC.VALUE      = 'ON'
+                    AND TAB.KEY                   = 'PURGE_SQL'
+                    AND RET.KEY                   = 'PURGE_RET'
+                    AND TAB.KEY_DETAIL            = RET.KEY_DETAIL
+                    AND TAB.KEY_DETAIL            = ON_OFF.KEY_DETAIL
+                    AND ON_OFF.KEY                = 'PURGE'
+                    AND ON_OFF.VALUE              = 'ON'"
+
+
+rm -f ${Table_Purge_SQL_Res}
+
+log_msg "Extaction SQL: ${TABLE_PURGE_QRY} "
+
+Execute_SQL_Res "${TABLE_PURGE_QRY}" ${Table_Purge_SQL_Res}
+
+if [ $? -eq 9 ]
+   then
+   log_msg "Error in Run the Table purge config query"
+   err_msg "Error in Run the Table purge config query"
+else
+
+   while read line
+   do
+      l_tbl_name=`echo ${line} | cut -d'|' -f1`
+      l_filter=`echo ${line} | cut -d'|' -f2`
+      l_ret_day=`echo ${line} | cut -d'|' -f3`
+
+      log_msg "Table Purge is started for ${l_tbl_name} ${l_filter} ${l_ret_day}"
+
+          Ctrl_Table_purge_Qry="DELETE FROM ${l_tbl_name} WHERE ${l_filter} ${l_ret_day}"
+          Execute_SQL_Res "${Ctrl_Table_purge_Qry}" ${Ctrl_Table_Purge_SQL_Res}
+          if [ $? -eq 9 ]
+             then
+                log_msg "Error in delete the table ${l_tbl_name} - ${Ctrl_Table_purge_Qry}"
+                err_msg "Error in delete the table ${l_tbl_name} - ${Ctrl_Table_purge_Qry}"
+          else
+                     log_msg "Purge is completed for the table ${l_tbl_name} - ${Ctrl_Table_purge_Qry}"
+                  fi
+
+     log_msg "File Purge is Ended for ${l_key_detail} ${l_tbl_name} - ${Ctrl_Table_purge_Qry}"
+   done < ${Table_Purge_SQL_Res}
+
+fi
+
+log_msg "========= Purge process is ended for Tables ================="
+log_msg "========= Purge process is ended  ================="
+
+exit 0
